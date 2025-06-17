@@ -1,5 +1,5 @@
 //This module provides functionality to calculate swap amounts for a bonding pool
-//without executing the actual swap. It allows previewing the expected input and 
+//without executing the actual swap. It allows previewing the expected input and
 //output amounts before performing a swap transaction.
 //
 //This calculates swapping Solana (SOL) to memecoins, converting the quote token
@@ -8,17 +8,6 @@
 use crate::models::bound::BoundPool;
 use anchor_lang::prelude::*;
 use anchor_spl::token::TokenAccount;
-
-/// Account validation struct for getting swap amounts
-#[derive(Accounts)]
-pub struct GetSwapXAmt<'info> {
-    /// The bonding pool account to calculate swap amounts for
-    pub pool: Account<'info, BoundPool>,
-    
-    /// The quote token vault, must match the pool's quote reserve vault
-    #[account(constraint = pool.quote_reserve.vault == quote_vault.key())]
-    pub quote_vault: Account<'info, TokenAccount>,
-}
 
 /// Calculates and logs the expected swap amounts for a given input amount
 ///
@@ -42,4 +31,14 @@ pub fn handle(ctx: Context<GetSwapXAmt>, coin_in_amount: u64, coin_y_min_value: 
     );
 
     Ok(())
+}
+/// Account validation struct for getting swap amounts
+#[derive(Accounts)]
+pub struct GetSwapXAmt<'info> {
+    /// The bonding pool account to calculate swap amounts for
+    pub pool: Account<'info, BoundPool>,
+
+    /// The quote token vault, must match the pool's quote reserve vault
+    #[account(constraint = pool.quote_reserve.vault == quote_vault.key())]
+    pub quote_vault: Account<'info, TokenAccount>,
 }

@@ -1,5 +1,8 @@
 pub mod bound;
 pub mod fees;
+pub mod points_epoch;
+pub mod staking;
+pub mod target_config;
 
 use anchor_lang::prelude::*;
 

@@ -1,0 +1,25 @@
+[package]
+name = "launchpad"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "launchpad"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+num-integer = "0.1.46"
+solana-program = "1.16.25"
+anchor-lang = { version = "0.29.0", features = ["init-if-needed"] }
+anchor-spl = { version = "0.29.0", features = ["metadata", "token"] }
+uint = "0.9.5"
+spl-math = { version = "0.2.0", features = ["no-entrypoint"] }

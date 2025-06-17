@@ -3,56 +3,6 @@ use crate::models::bound::BoundPool;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
-/// Account validation struct for swapping meme tokens for SOL
-/// 
-/// This struct validates that all required accounts are present and properly configured
-/// for swapping meme tokens for SOL with direct token transfer from user's wallet.
-///
-/// # Account Requirements
-/// * `pool` - The mutable bonding curve pool account
-/// * `meme_vault` - The pool's meme token vault account
-/// * `quote_vault` - The pool's SOL vault account
-/// * `user_meme` - The user's meme token account
-/// * `user_sol` - The user's SOL token account to receive swapped tokens
-/// * `owner` - The signer/owner of the meme tokens
-/// * `pool_signer` - PDA with authority over pool accounts
-/// * `token_program` - The Solana Token Program
-#[derive(Accounts)]
-pub struct SwapCoinX<'info> {
-    #[account(mut)]
-    pub pool: Account<'info, BoundPool>,
-    
-    #[account(
-        mut,
-        constraint = pool.meme_reserve.vault == meme_vault.key()
-    )]
-    pub meme_vault: Account<'info, TokenAccount>,
-    
-    #[account(
-        mut,
-        constraint = pool.quote_reserve.vault == quote_vault.key()
-    )]
-    pub quote_vault: Account<'info, TokenAccount>,
-    
-    #[account(
-        mut,
-        constraint = user_meme.mint == pool.meme_reserve.mint @ AmmError::InvalidTokenMints,
-        constraint = user_meme.owner == owner.key()
-    )]
-    pub user_meme: Account<'info, TokenAccount>,
-    
-    #[account(mut)]
-    pub user_sol: Account<'info, TokenAccount>,
-    
-    pub owner: Signer<'info>,
-    
-    /// CHECK: pda signer
-    #[account(seeds = [BoundPool::SIGNER_PDA_PREFIX, pool.key().as_ref()], bump)]
-    pub pool_signer: AccountInfo<'info>,
-    
-    pub token_program: Program<'info, Token>,
-}
-
 impl<'info> SwapCoinX<'info> {
     /// Creates a CPI context for transferring meme tokens from user to pool
     ///
@@ -121,21 +71,23 @@ pub fn handle(ctx: Context<SwapCoinX>, coin_in_amount: u64, coin_y_min_value: u6
         return Err(error!(AmmError::InsufficientBalance));
     }
 
-    let pool_state = &mut accs.pool;
-
     // Check if the pool is locked
-    if pool_state.locked {
+    if accs.pool.locked {
         return Err(error!(AmmError::PoolIsLocked));
     }
 
     // Calculate swap amounts based on bonding curve
-    let swap_amount = pool_state.swap_amounts(coin_in_amount, coin_y_min_value, false);
+    let swap_amount = accs
+        .pool
+        .swap_amounts(coin_in_amount, coin_y_min_value, false);
 
     // Transfer meme tokens from user to pool
     token::transfer(
         accs.send_meme_to_pool(),
         swap_amount.amount_in + swap_amount.admin_fee_in,
     )?;
+
+    let pool_state = &mut accs.pool;
 
     // Update admin fees
     pool_state.admin_fees_meme += swap_amount.admin_fee_in;
@@ -168,4 +120,53 @@ pub fn handle(ctx: Context<SwapCoinX>, coin_in_amount: u64, coin_y_min_value: u6
     );
 
     Ok(())
+}
+/// Account validation struct for swapping meme tokens for SOL
+///
+/// This struct validates that all required accounts are present and properly configured
+/// for swapping meme tokens for SOL with direct token transfer from user's wallet.
+///
+/// # Account Requirements
+/// * `pool` - The mutable bonding curve pool account
+/// * `meme_vault` - The pool's meme token vault account
+/// * `quote_vault` - The pool's SOL vault account
+/// * `user_meme` - The user's meme token account
+/// * `user_sol` - The user's SOL token account to receive swapped tokens
+/// * `owner` - The signer/owner of the meme tokens
+/// * `pool_signer` - PDA with authority over pool accounts
+/// * `token_program` - The Solana Token Program
+#[derive(Accounts)]
+pub struct SwapCoinX<'info> {
+    #[account(mut)]
+    pub pool: Account<'info, BoundPool>,
+
+    #[account(
+        mut,
+        constraint = pool.meme_reserve.vault == meme_vault.key()
+    )]
+    pub meme_vault: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        constraint = pool.quote_reserve.vault == quote_vault.key()
+    )]
+    pub quote_vault: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        constraint = user_meme.mint == pool.meme_reserve.mint @ AmmError::InvalidTokenMints,
+        constraint = user_meme.owner == owner.key()
+    )]
+    pub user_meme: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub user_sol: Account<'info, TokenAccount>,
+
+    pub owner: Signer<'info>,
+
+    /// CHECK: pda signer
+    #[account(seeds = [BoundPool::SIGNER_PDA_PREFIX, pool.key().as_ref()], bump)]
+    pub pool_signer: AccountInfo<'info>,
+
+    pub token_program: Program<'info, Token>,
 }
