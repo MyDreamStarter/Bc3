@@ -58,6 +58,16 @@ pub enum AmmError {
     NonZeroInitialMemeSupply,
     AirdroppedTokensOvercap,
     InvalidVestingPeriod,
+    #[msg("Migration threshold not reached - need 80% of tokens sold")]
+    MigrationThresholdNotReached,
+    #[msg("Pool has already been migrated to Raydium")]
+    AlreadyMigrated,
+
+    #[msg("Invalid token order - token_0 must be smaller than token_1")]
+    InvalidTokenOrder,
+
+    #[msg("Pool already migrated")]
+    PoolAlreadyMigrated,
 }
 
 #[allow(dead_code)]
@@ -66,7 +76,6 @@ pub fn acc(msg: impl Display) -> AmmError {
 
     AmmError::InvalidAccountInput
 }
-
 #[allow(dead_code)]
 pub fn arg(msg: impl Display) -> AmmError {
     msg!("[InvalidArg] {}", msg);

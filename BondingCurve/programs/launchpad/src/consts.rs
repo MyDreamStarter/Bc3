@@ -16,11 +16,6 @@ pub const DECIMALS_S: u128 = 1_000_000_000;
 
 pub const MAX_AIRDROPPED_TOKENS: u64 = 100_000_000_000_000;
 
-pub const POINTS_DECIMALS: u64 = 1_000_000_000;
-pub const MAX_POINTS_AVAILABLE: u64 = 1_000_000_000 * POINTS_DECIMALS;
-pub const BOOSTED_POINTS_AMOUNT: u64 = 300_000_000 * POINTS_DECIMALS;
-pub const BOOSTED_SOL_AMOUNT: u64 = 100_000 * WSOL_DECIMALS;
-
 #[cfg(feature = "localnet-testing")]
 pub const LOCK_TIME: i64 = 4; // 4 seconds
 #[cfg(feature = "mainnet-testing")]
@@ -43,9 +38,6 @@ pub const MIN_LINEAR: i64 = 600; // 10 minutes
 pub const MIN_LINEAR: i64 = 86_400; // 1 day
 pub const MIN_LINEAR: i64 = 86_400; // 1 day
 pub const MAX_LINEAR: i64 = 1_123_200; // 13 days
-
-pub const INSTANT_TOKEN_PERCENTAGE_NUM: u64 = 10;
-pub const INSTANT_TOKEN_PERCENTAGE_DENOM: u64 = 100;
 
 pub const POINTS_PDA: &'static [u8; 10] = b"points_pda";
 

@@ -1,6 +1,7 @@
 use crate::consts::{
-    BP_FEE_KEY, DEFAULT_MAX_M, DEFAULT_MAX_M_LP, DEFAULT_PRICE_FACTOR_DENOMINATOR,
-    DEFAULT_PRICE_FACTOR_NUMERATOR, MAX_AIRDROPPED_TOKENS, MAX_LINEAR, MAX_MEME_TOKENS, MIN_LINEAR,
+    ANCHOR_DISCRIMINATOR, BP_FEE_KEY, DEFAULT_MAX_M, DEFAULT_MAX_M_LP,
+    DEFAULT_PRICE_FACTOR_DENOMINATOR, DEFAULT_PRICE_FACTOR_NUMERATOR, MAX_AIRDROPPED_TOKENS,
+    MAX_MEME_TOKENS,
 };
 use crate::err;
 use crate::err::AmmError;
@@ -46,7 +47,6 @@ impl<'info> NewPool<'info> {
 ///
 /// * `ctx`: The context of the current instruction.
 /// * `airdropped_tokens`: The number of tokens to be airdropped.
-/// * `vesting_period`: The duration of the vesting period in seconds.
 ///
 /// # Returns
 ///
@@ -57,34 +57,27 @@ impl<'info> NewPool<'info> {
 /// Sam wants to:
 /// 1. Create 1B total tokens
 /// 2. Set aside up to 100M for airdrops
-/// 3. Set a 7-day vesting period
-/// 4. Configure automated trading
+/// 3. Configure automated trading
 ///
 /// # Parameters
 /// * `ctx` - The context containing all necessary accounts
 /// * `airdropped_tokens` - Amount of tokens for airdrop (max 100M)
-/// * `vesting_period` - Time tokens are locked (in seconds)
-pub fn handle(ctx: Context<NewPool>, airdropped_tokens: u64, vesting_period: i64) -> Result<()> {
+pub fn handle(ctx: Context<NewPool>, airdropped_tokens: u64) -> Result<()> {
     let accs = ctx.accounts;
 
-    // Chapter 1: Initial Checks 🔍
+    // Step 1: Initial Checks
     // Ensure we're starting with a fresh token mint
     if accs.meme_mint.supply != 0 {
         return Err(error!(AmmError::NonZeroInitialMemeSupply));
     }
 
     // Ensure we're not airdropping too many tokens
+    // Only 100M tokens can be airdropped , which is 10% of the total supply
     if airdropped_tokens > MAX_AIRDROPPED_TOKENS {
         return Err(error!(AmmError::AirdroppedTokensOvercap));
     }
 
-    // Ensure the vesting period is within the allowed range
-    // Check Sam's vesting period (between 1-13 days)
-    if MIN_LINEAR > vesting_period || vesting_period > MAX_LINEAR {
-        return Err(error!(AmmError::InvalidVestingPeriod));
-    }
-
-    // Chapter 2: Minting Meme Tokens 💰
+    // Step 2: Minting Meme Tokens to the pool program
     // Prepare the seeds for the pool signer PDA
     let seeds = &[
         BoundPool::SIGNER_PDA_PREFIX,    // "pool_signer"
@@ -101,7 +94,7 @@ pub fn handle(ctx: Context<NewPool>, airdropped_tokens: u64, vesting_period: i64
     )
     .unwrap();
 
-    // Chapter 3: Configuring Pool Settings ⚙️
+    // Step 3: Configuring Pool Settings
     let pool = &mut accs.pool;
 
     // Set up fee collection vault
@@ -120,7 +113,7 @@ pub fn handle(ctx: Context<NewPool>, airdropped_tokens: u64, vesting_period: i64
         fee_quote_percent: FEE,
     };
 
-    // Chapter 4: Setting Up Price Mathematics 📊
+    // Step 4: Setting Up Price Mathematics
     // Calculate SOL decimal precision (1B = 1 SOL)
     let mint_decimals = 10_u128
         .checked_pow(accs.quote_mint.decimals as u32)
@@ -143,7 +136,7 @@ pub fn handle(ctx: Context<NewPool>, airdropped_tokens: u64, vesting_period: i64
         price_factor_denom,
     )?;
 
-    // Chapter 5: Finalizing Pool Configuration 🎯
+    // Step 5: Finalizing Pool Configuration
     pool.config = Config {
         alpha_abs, // Price curve slope (α)
         beta: compute_beta(
@@ -169,7 +162,7 @@ pub fn handle(ctx: Context<NewPool>, airdropped_tokens: u64, vesting_period: i64
         },
     };
 
-    // Chapter 6: Setting Up Token Distribution 🎁
+    // Step 6: Setting Up Token Distribution
     // Configure token reserve
     pool.meme_reserve.tokens = DEFAULT_MAX_M as u64; // 690M for trading
     pool.meme_reserve.mint = accs.meme_mint.key(); // Token mint address
@@ -177,9 +170,8 @@ pub fn handle(ctx: Context<NewPool>, airdropped_tokens: u64, vesting_period: i64
 
     // Final settings
     pool.locked = false; // Pool ready for trading
-    pool.creator_addr = accs.sender.key(); // Sam is the creator
+    pool.creator_addr = accs.sender.key(); // Creator address
     pool.airdropped_tokens = airdropped_tokens; // Set airdrop amount
-    pool.vesting_period = vesting_period; // Set vesting time
 
     Ok(())
 }
@@ -199,7 +191,7 @@ pub struct NewPool<'info> {
     #[account(
         init,
         payer = sender,
-        space = BoundPool::INIT_SPACE,
+        space = ANCHOR_DISCRIMINATOR + BoundPool::INIT_SPACE,
         seeds = [BoundPool::POOL_PREFIX, meme_mint.key().as_ref(), quote_mint.key().as_ref()],
         bump
     )]
